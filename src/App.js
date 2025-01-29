@@ -88,6 +88,29 @@ const states = [
   { name: "Wyoming", url: "https://raw.githubusercontent.com/OpenDataDE/State-zip-code-GeoJSON/refs/heads/master/wy_wyoming_zip_codes_geo.min.json" },
 ];
 
+
+
+// Add custom styles for scrollbars
+const scrollbarStyles = `
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #555;
+  }
+`;
+const styleSheet = document.createElement("style");
+styleSheet.innerText = scrollbarStyles;
+document.head.appendChild(styleSheet);
 function ZipOverlay({ zipUrl }) {
   const map = useMap();
   const layersCache = useRef({});
@@ -359,7 +382,13 @@ function App() {
       (item) => item.type === "pricing"
     );
 
-    if (filteredPricingData.length === 0) {
+    //new added
+
+    const filteredCompsData = shapeFilteredData.filter(
+      (item) => item.type === "comps"
+    );
+
+    if (filteredPricingData.length === 0 && filteredCompsData.length === 0) {
       alert("No data points within the drawn shape to download.");
       return;
     }
@@ -370,10 +399,28 @@ function App() {
       Latitude: item.latitude,
       Longitude: item.longitude,
     }));
+    const compsDataTab = filteredCompsData.map((item) => ({
+      PRICE: item.price,
+      ACRES: item.acres,
+      Latitude: item.latitude,
+      Longitude: item.longitude,
+    }));
 
     const workbook = XLSX.utils.book_new();
-    const pricingSheet = XLSX.utils.json_to_sheet(pricingDataTab);
-    XLSX.utils.book_append_sheet(workbook, pricingSheet, "Pricing Data");
+
+    // Add Pricing Data sheet  new added
+    if (pricingDataTab.length > 0) {
+      const pricingSheet = XLSX.utils.json_to_sheet(pricingDataTab);
+      XLSX.utils.book_append_sheet(workbook, pricingSheet, "Pricing Data");
+    }
+
+    if (compsDataTab.length > 0) {
+      const compsSheet = XLSX.utils.json_to_sheet(compsDataTab);
+      XLSX.utils.book_append_sheet(workbook, compsSheet, "Comps Data");
+    }
+
+    // const pricingSheet = XLSX.utils.json_to_sheet(pricingDataTab);
+    // XLSX.utils.book_append_sheet(workbook, pricingSheet, "Pricing Data");
     XLSX.writeFile(workbook, "filtered_data.xlsx");
 
     // Remove exported APNs from the map data
@@ -394,7 +441,32 @@ function App() {
   const markersToDisplay = acreageFilteredData.length
     ? acreageFilteredData
     : pricingData;
+ // Enhanced styles for the control panel
+ const controlPanelStyle = {
+  position: "absolute",
+  zIndex: 1000,
+  top: 10,
+  right: 10,
+  background: "#f8f9fa",
+  padding: "15px",
+  borderRadius: "10px",
+  boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+  width: "280px",
+  fontFamily: "Arial, sans-serif",
+  maxHeight: "90vh",
+  overflowY: "auto",
+};
 
+const buttonStyle = {
+  padding: "10px 15px",
+  margin: "5px 0",
+  border: "none",
+  borderRadius: "6px",
+  cursor: "pointer",
+  width: "100%",
+  fontWeight: "500",
+  transition: "background-color 0.2s",
+};
   return (
     <div style={{ height: "100vh", width: "100%", position: "relative" }}>
       {/* Control Panel */}
@@ -413,17 +485,15 @@ function App() {
           maxHeight: "90vh",
           overflowY: "auto",
         }}
-      >
-        <div style={{ display: 'none' }}>
-
-        <StateDropdown
+      >  <div style={{ display: 'none' }}>
+     
+                <StateDropdown
           states={states}
           selectedStateUrl={selectedStateUrl}
           onSelect={(url) => setSelectedStateUrl(url)}
-          
-          />
-          </div>
-        <h3 style={{ marginTop: 0, marginBottom: "10px" ,textAlign: 'center'}}>Data Controls</h3>
+        />
+        </div>
+        <h3 style={{ marginTop: 0, marginBottom: "10px" }}>Data Controls</h3>
         <div style={{ marginBottom: "15px" }}>
           <label style={{ display: "block", fontWeight: "bold" }}>
             Upload Main CSV:
@@ -675,3 +745,4 @@ function StateDropdown({ states, selectedStateUrl, onSelect }) {
 }
 
 export default App;
+
